@@ -1,164 +1,159 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="d-flex justify-content-between align-items-center mb-5">
-        <h1 class="page-title">
-            <i class="bi bi-basket2-fill me-3"></i>My Food Pantry
-        </h1>
-        <a href="{{ route('food-items.create') }}" class="btn btn-primary btn-lg">
-            <i class="bi bi-plus-circle me-2"></i>Add New Item
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Food Items</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ route('food-items.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Item
         </a>
     </div>
+</div>
 
-    @if($foodItems->count() > 0)
-        <!-- Stats Row -->
-        <div class="row mb-4">
-            <div class="col-md-4 mb-3">
-                <div class="card glass-effect">
-                    <div class="card-body text-center">
-                        <i class="bi bi-box-seam display-4 text-primary mb-2"></i>
-                        <h4 class="fw-bold">{{ $foodItems->count() }}</h4>
-                        <p class="text-muted mb-0">Total Items</p>
-                    </div>
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('food-items.index') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search"
+                       value="{{ request('search') }}" placeholder="Search by name...">
+            </div>
+            <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}"
+                                {{ request('category') == $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Expired</option>
+                    <option value="expiring_soon" {{ request('status') == 'expiring_soon' ? 'selected' : '' }}>Expiring Soon</option>
+                    <option value="low_stock" {{ request('status') == 'low_stock' ? 'selected' : '' }}>Low Stock</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card glass-effect">
-                    <div class="card-body text-center">
-                        <i class="bi bi-clock-history display-4 text-warning mb-2"></i>
-                        <h4 class="fw-bold">{{ $foodItems->filter(fn($item) => $item->expiresSoon())->count() }}</h4>
-                        <p class="text-muted mb-0">Expiring Soon</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card glass-effect">
-                    <div class="card-body text-center">
-                        <i class="bi bi-exclamation-triangle display-4 text-danger mb-2"></i>
-                        <h4 class="fw-bold">{{ $foodItems->filter(fn($item) => $item->isExpired())->count() }}</h4>
-                        <p class="text-muted mb-0">Expired</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </form>
+    </div>
+</div>
 
-        <!-- Food Items Grid -->
-        <div class="row">
-            @foreach($foodItems as $item)
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="card food-item-card h-100
-                            @if($item->isExpired()) danger
-                            @elseif($item->expiresSoon()) warning
-                            @endif">
-                        <div class="card-body p-4">
-                            <!-- Category Badge -->
-                            <div class="category-badge category-{{ strtolower($item->category) }}">
-                                {{ $item->category }}
-                            </div>
-
-                            <!-- Item Name -->
-                            <h5 class="card-title fw-bold mb-3">{{ $item->name }}</h5>
-
-                            <!-- Quantity -->
-                            <div class="quantity-display mb-3">
-                                <i class="bi bi-box me-2"></i>{{ $item->quantity }} {{ $item->unit }}
-                            </div>
-
-                            <!-- Expiry Date -->
-                            @if($item->expiry_date)
-                                <div class="expiry-badge mb-3
-                                            @if($item->isExpired()) expiry-danger
-                                            @elseif($item->expiresSoon()) expiry-warning
-                                                @else expiry-good
-                                            @endif">
-                                    @if($item->isExpired())
-                                        <i class="bi bi-exclamation-triangle"></i>
-                                        Expired {{ $item->expiry_date->diffForHumans() }}
-                                    @elseif($item->expiresSoon())
-                                        <i class="bi bi-clock"></i>
-                                        Expires {{ $item->expiry_date->diffForHumans() }}
-                                    @else
-                                        <i class="bi bi-calendar-check"></i>
-                                        Expires {{ $item->expiry_date->format('M d, Y') }}
+<!-- Items Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Location</th>
+                        <th>Expiration Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($items as $item)
+                        <tr>
+                            <td>
+                                <strong>{{ $item->name }}</strong>
+                                @if($item->description)
+                                    <br><small class="text-muted">{{ Str::limit($item->description, 50) }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ $item->category->color }}">
+                                    {{ $item->category->name }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>{{ $item->quantity }}</strong> {{ $item->unit }}
+                                @if($item->quantity <= 5)
+                                    <br><small class="text-warning">Low Stock</small>
+                                @endif
+                            </td>
+                            <td>{{ $item->location ?? 'Not specified' }}</td>
+                            <td>
+                                @if($item->expiration_date)
+                                    {{ $item->expiration_date->format('M d, Y') }}
+                                    @if($item->days_until_expiration !== null)
+                                        <br>
+                                        <small class="text-muted">
+                                            @if($item->days_until_expiration > 0)
+                                                {{ $item->days_until_expiration }} days left
+                                            @elseif($item->days_until_expiration == 0)
+                                                Expires today
+                                            @else
+                                                {{ abs($item->days_until_expiration) }} days ago
+                                            @endif
+                                        </small>
                                     @endif
-                                </div>
-                            @else
-                                <div class="expiry-badge expiry-good mb-3">
-                                    <i class="bi bi-infinity"></i>
-                                    No expiry date
-                                </div>
-                            @endif
-
-
-                            <button class="btn btn-outline-success flex-fill" data-bs-toggle="modal"
-                                data-bs-target="#consumeModal{{ $item->id }}">
-                                <i class="bi bi-check-circle me-1"></i> Consume
-                            </button>
-
-                            <!-- Modal -->
-                            <div class="modal fade" id="consumeModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <form method="POST" action="{{ route('food-items.consume', $item) }}">
+                                @else
+                                    <span class="text-muted">No expiration</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($item->is_expired)
+                                    <span class="badge bg-danger">Expired</span>
+                                @elseif($item->is_expiring_soon)
+                                    <span class="badge bg-warning">Expiring Soon</span>
+                                @elseif($item->quantity <= 5)
+                                    <span class="badge bg-warning">Low Stock</span>
+                                @else
+                                    <span class="badge bg-success">Good</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('food-items.show', $item) }}"
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ route('food-items.edit', $item) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{{ route('food-items.destroy', $item) }}"
+                                          class="d-inline" onsubmit="return confirm('Are you sure?')">
                                         @csrf
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Consume {{ $item->name }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <label>Quantity</label>
-                                                <input type="number" name="quantity" step="0.01" class="form-control"
-                                                    max="{{ $item->quantity }}" required>
-                                                <label class="mt-2">Notes (optional)</label>
-                                                <textarea name="notes" class="form-control" rows="2"></textarea>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="submit" class="btn btn-success">Record</button>
-                                            </div>
-                                        </div>
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </form>
                                 </div>
-                            </div>
-
-
-                            <!-- Notes -->
-                            @if($item->notes)
-                                <div class="mb-3">
-                                    <small class="text-muted">
-                                        <i class="bi bi-sticky me-1"></i>{{ $item->notes }}
-                                    </small>
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Card Actions -->
-                        <div class="card-footer bg-transparent border-0 p-4 pt-0">
-                            <div class="d-flex gap-2">
-                                <a href="{{ route('food-items.edit', $item) }}" class="btn btn-outline-primary flex-fill">
-                                    <i class="bi bi-pencil me-1"></i>Edit
-                                </a>
-                                <form action="{{ route('food-items.destroy', $item) }}" method="POST" class="flex-fill">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger w-100"
-                                        onclick="return confirm('Are you sure you want to delete {{ $item->name }}?')">
-                                        <i class="bi bi-trash me-1"></i>Delete
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
+                                No food items found
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-    @else
-        <div class="empty-state">
-            <i class="bi bi-basket2"></i>
-            <h2 class="mt-4 mb-3">Your pantry is empty!</h2>
-            <p class="text-muted mb-4 fs-5">Start tracking your food items and never let anything go to waste again.</p>
-            <a href="{{ route('food-items.create') }}" class="btn btn-primary btn-lg">
-                <i class="bi bi-plus-circle me-2"></i>Add Your First Item
-            </a>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center">
+            {{ $items->appends(request()->query())->links() }}
         </div>
-    @endif
+    </div>
+</div>
 @endsection

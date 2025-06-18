@@ -12,74 +12,67 @@ class FoodItem extends Model
 
     protected $fillable = [
         'name',
-        'category', 
+        'description',
+        'category_id',
         'quantity',
         'unit',
-        'expiry_date',
-        'notes',
-        'original_quantity'
+        'expiration_date',
+        'date_added',
+        'cost',
+        'location',
+        'status'
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
-        'quantity' => 'decimal:2',
-        'original_quantity' => 'decimal:2'
+        'expiration_date' => 'date',
+        'date_added' => 'date',
+        'cost' => 'decimal:2'
     ];
 
-    // Relationships
-    public function transactions()
+    public function category()
     {
-        return $this->hasMany(FoodTransaction::class);
+        return $this->belongsTo(Category::class);
     }
 
-    // Check if item is expired
-    public function isExpired()
+    public function donationItems()
     {
-        return $this->expiry_date && $this->expiry_date->isPast();
+        return $this->hasMany(DonationItem::class);
     }
 
-    // Check if item expires soon (within 7 days)
-    public function expiresSoon()
+    public function getIsExpiredAttribute()
     {
-        return $this->expiry_date && 
-               $this->expiry_date->between(now(), now()->addWeek()) &&
-               !$this->isExpired();
+        return $this->expiration_date && $this->expiration_date->isPast();
     }
 
-    // Get expiry status for display
-    public function getExpiryStatus()
+    public function getIsExpiringSoonAttribute()
     {
-        if (!$this->expiry_date) {
-            return ['status' => 'no-expiry', 'text' => 'No expiry date', 'class' => 'expiry-good'];
-        }
-
-        if ($this->isExpired()) {
-            return [
-                'status' => 'expired', 
-                'text' => 'Expired ' . $this->expiry_date->diffForHumans(), 
-                'class' => 'expiry-danger'
-            ];
-        }
-
-        if ($this->expiresSoon()) {
-            return [
-                'status' => 'warning', 
-                'text' => 'Expires ' . $this->expiry_date->diffForHumans(), 
-                'class' => 'expiry-warning'
-            ];
-        }
-
-        return [
-            'status' => 'good', 
-            'text' => 'Expires ' . $this->expiry_date->format('M d, Y'), 
-            'class' => 'expiry-good'
-        ];
+        return $this->expiration_date &&
+               $this->expiration_date->between(now(), now()->addDays(7));
     }
 
-    // Get quantity percentage remaining
-    public function getQuantityPercentage()
+    public function getDaysUntilExpirationAttribute()
     {
-        if ($this->original_quantity <= 0) return 100;
-        return ($this->quantity / $this->original_quantity) * 100;
+        if (!$this->expiration_date) return null;
+        return now()->diffInDays($this->expiration_date, false);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available')->where('quantity', '>', 0);
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('expiration_date', '<', now());
+    }
+
+    public function scopeExpiringSoon($query)
+    {
+        return $query->whereBetween('expiration_date', [now(), now()->addDays(7)]);
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->where('quantity', '<=', 5);
     }
 }
